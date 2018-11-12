@@ -63,9 +63,15 @@ public class CubeController : MonoBehaviour
 		}
 	}
 
+	
+	public void MoveToPoint(Vector3 position)
+	{
+		_rigidbody.position = position;
+	}
+
 	public bool Ground()
 	{
-		return _bCH.CollidingFromDirection(-transform.up, groundLayerMask, 0.98f);
+		return _bCH.CollidingFromDirection(-transform.up, groundLayerMask, 0.98f, 0);
 	}
 
 	/// <summary>
@@ -73,12 +79,12 @@ public class CubeController : MonoBehaviour
 	/// </summary>
 	/// <param name="speed"></param>
 	/// <param name="jumpTime"></param>
-	public void Jump(float speed, float jumpTime, float startJumpTime)
+	public void Jump(float speed, float jumpTime)
 	{
 		if (jumpTime < 0)
 		{
 			jumpTime = 0;
-		} 
+		}
 
 		if (jumpTime > 0)
 		{
@@ -110,5 +116,18 @@ public class CubeController : MonoBehaviour
 	public void Respawn()
 	{
 		transform.position = respawnPoint.position;
+	}
+
+	public void UseGravity(bool enabled)
+	{
+		_rigidbody.useGravity = enabled;
+	}
+
+	/// <summary>
+	/// sets velocity to 0
+	/// </summary>
+	public void IsKinematic(bool kinematic)
+	{
+		_rigidbody.isKinematic = kinematic;
 	}
 }

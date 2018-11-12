@@ -4,7 +4,7 @@ using UnityEngine;
 [RequireComponent(typeof(CubeController))]
 public class CubeMotor : MonoBehaviour
 {
-	bool _movementEnabled;
+	bool _movementEnabled = true;
 	public enum eDeathTypes
 	{
 		hit
@@ -30,6 +30,7 @@ public class CubeMotor : MonoBehaviour
 	bool _jumpDown;
 	bool _jumpDownReset = true;
 
+	bool _jumpOneShot;
 
 	private void Start()
 	{
@@ -38,7 +39,6 @@ public class CubeMotor : MonoBehaviour
 			Debug.LogError("Need to add a CubeInfoScriptableObject to this controller!");
 			enabled = false;
 		}
-
 		_controller = GetComponent<CubeController>();
 	}
 	
@@ -79,7 +79,7 @@ public class CubeMotor : MonoBehaviour
 		if (!_controller.dead && _movementEnabled)
 		{
 			_controller.Move(_cubeInfoSO.speed, moveDirection);
-			_controller.Jump(_realJumpForce, _jumpTime, _cubeInfoSO.jumpTime);
+			_controller.Jump(_realJumpForce, _jumpTime);
 		}
 
 	}
@@ -101,17 +101,21 @@ public class CubeMotor : MonoBehaviour
 	void SetJump()
 	{
 		//starting it up
-		if (_jumpDown && _controller.Ground())
+		if (!_jumpDown)
+		{
+			_jumpOneShot = false;
+		}
+		if (_jumpDown && _controller.Ground() && !_jumpOneShot)
 		{
 			_jumpTime = _cubeInfoSO.jumpTime;
-			//in case jumpForce = 1
-			_realJumpForce = _cubeInfoSO.jumpForce - (_cubeInfoSO.jumpForce - 0.5f);
+			_realJumpForce = 0.5f;
+			_jumpOneShot = true;
 		}
 		//extra jumps.
 		else if (_jumpDown && !_controller.Ground() && _extraJumps < _cubeInfoSO.maxExtraJumps)
 		{
 			_jumpTime = _cubeInfoSO.jumpTime;
-			_realJumpForce = _cubeInfoSO.jumpForce - (_cubeInfoSO.jumpForce - 1);
+			_realJumpForce = 0.5f;
 			_extraJumps++;
 			print(_extraJumps);
 		}
@@ -120,8 +124,14 @@ public class CubeMotor : MonoBehaviour
 		//gets the jump to increase to top speed in roughly a second/jumpForceIncreaseMultiplier.
 		if (_realJumpForce < _cubeInfoSO.jumpForce)
 		{
-			_realJumpForce += _cubeInfoSO.jumpForce * _jumpForceIncreaseMultiplier * Time.deltaTime;
+
+			_realJumpForce += _cubeInfoSO.jumpForce * _jumpForceIncreaseMultiplier * Time.fixedDeltaTime;
 		}
+		else
+		{
+			_realJumpForce = _cubeInfoSO.jumpForce;
+		}
+
 		if (_jumping)
 		{
 			_jumpTime -= 1 * Time.deltaTime;
@@ -129,12 +139,18 @@ public class CubeMotor : MonoBehaviour
 		else
 		{
 			_jumpTime = 0;
+			_jumpOneShot = false;
 		}
 		
 	}
 
-	public void SetMovement(bool enabled)
+	public void SetMovementActive(bool enabled)
 	{
 		_movementEnabled = enabled;
+	}
+
+	public void SetGravityActive(bool enabled)
+	{
+		_controller.UseGravity(enabled);
 	}
 }

@@ -8,23 +8,15 @@ public class TheCubeGameManager : MonoBehaviour
 	private static TheCubeGameManager _S;
 	public int currentLevel;
 	AsyncOperation asyncManager;
-	static bool created;
 
 	private void Awake()
 	{
+		
 		if (_S == null)
 		{
 			_S = this;
 		}
-		if (!created)
-		{
-			DontDestroyOnLoad(gameObject);
-			created = true;
-		}
-		if (this != _S)
-		{
-			Destroy(this);
-		}
+		
 		currentLevel = SceneManager.GetActiveScene().buildIndex;
 	}
 	public static void LoadNextLevel()
@@ -32,6 +24,7 @@ public class TheCubeGameManager : MonoBehaviour
 		if (LoadComplete())
 		{
 			_S.asyncManager = SceneManager.LoadSceneAsync(_S.currentLevel + 1);
+			CheckpointManager.RemoveAllCheckpoints();
 		}
 	}
 	public static void LoadLevel(int level)
@@ -43,7 +36,8 @@ public class TheCubeGameManager : MonoBehaviour
 	}
 	public static bool LoadComplete()
 	{
-		if(_S.asyncManager != null)
+		_S.currentLevel = SceneManager.GetActiveScene().buildIndex;
+		if (_S.asyncManager != null)
 			return _S.asyncManager.isDone;
 		return true;
 	}
