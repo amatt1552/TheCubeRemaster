@@ -15,6 +15,7 @@ public class Bullet : MonoBehaviour
 	public bool useGlobalSpace = true;
 	public float lifetime = 4;
 	public float speed = 5;
+	public ParticleSystem blasterDeath;
 	Rigidbody rb;
 	
 	void Awake ()
@@ -79,6 +80,11 @@ public class Bullet : MonoBehaviour
 	
 	private void OnTriggerEnter(Collider collision)
 	{
+		if (blasterDeath != null)
+		{
+			blasterDeath.transform.parent = null;
+			blasterDeath.Play();
+		} 
 		Destroy(gameObject);
 	}
 

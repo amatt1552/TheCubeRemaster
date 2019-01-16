@@ -5,37 +5,62 @@ using UnityEngine;
 [ExecuteInEditMode]
 public class Launcher : MonoBehaviour
 {
-	//public GameObject targetObject;
+	//public stuff for figuring out the force for the launcher
+
 	[Range(1,45)]
 	public float angle = 45;
 	public Transform targetPosition;
-	private float _velocity;
 	public Vector3 direction;
-	ParticleSystem part;
-	ParticleSystem.VelocityOverLifetimeModule PartS;
+
+	//only want targetZ to be set in inspector
+
+	[Tooltip("if set to -1 will be the distance's z")]
+	[SerializeField]
+	float targetZ = -1;
+	private float _velocity;
+
+	//particle stuff
+
+	public ParticleSystem particlesForVisualiztion;
+	ParticleSystem.VelocityOverLifetimeModule particlesVOLM;
 
 	private void Awake()
 	{
-		part = GetComponent<ParticleSystem>();
-		PartS = part.velocityOverLifetime;
-		part.Play();
+		//normally I wouldn't bother with the null check with a RequireComponent. I've been
+		//getting errors sometimes though, so I need to check it anyway to prevent them.
+		//might get rid of the RequireComponent
+		if (particlesForVisualiztion == null)
+		{
+			particlesForVisualiztion = GetComponent<ParticleSystem>();
+		}
+		if (particlesForVisualiztion != null)
+		{
+			particlesVOLM = particlesForVisualiztion.velocityOverLifetime;
+			particlesForVisualiztion.Play();
+		}
+
+		//more so for other scripts to access it but wanted to see the values at start.
+
+		GetDistanceZ();
 	}
 	private void Update()
 	{
-		if (Application.isPlaying)
+		//for editor stuff
+		if (particlesForVisualiztion != null)
 		{
+			if (Application.isPlaying)
+			{
 
-			part.Clear();
-			part.Stop();
-		}
-		else
-		{
-			
-			part = GetComponent<ParticleSystem>();
-			PartS = part.velocityOverLifetime;
-		}
+				particlesForVisualiztion.Clear();
+				particlesForVisualiztion.Stop();
+			}
+			else
+			{
+				particlesVOLM = particlesForVisualiztion.velocityOverLifetime;
+			}
 
-		CalculateForce();
+			CalculateForce();
+		}
 	}
 
 	void CalculateForce()
@@ -52,21 +77,21 @@ public class Launcher : MonoBehaviour
 		//https://answers.unity.com/questions/1353777/calculate-initial-velocity-given-distance-gravity.html
 		//velocity = (1/ Mathf.Cos(angle * Mathf.Deg2Rad))*Mathf.Sqrt(0.5F*distanceX*distanceX* gravity /(distanceY + Mathf.Tan(angle * Mathf.Deg2Rad) * distanceX));
 		_velocity = (1 / Mathf.Cos(angleRadians)) * Mathf.Sqrt((0.5f * distanceXZ * distanceXZ * gravity) / (distanceY + Mathf.Tan(angleRadians) * distanceXZ));
-		//print((Mathf.Cos(angleRadians) * velocityReduction) + 0.3f);
 		//cos(θ) = Adjacent / Hypotenuse. I want Adjacent.
 		float directionX = Mathf.Cos(angleRadians) * _velocity;
-		//sin(θ) = Opposite / Hypotenuse. I want Opposite
+		//sin(θ) = Opposite / Hypotenuse. I want Opposite.
 		float directionY = Mathf.Sin(angleRadians) * _velocity;
 		//just guessing with the Z...
 		float directionZ = Mathf.Cos(angleRadians) * _velocity;
 		
-		//helps me get the direction for the x and z
 		Vector3 normalizedDistance = distance.normalized;
+		//lets me get the direction just for the x and z
 		normalizedDistance.y = 1;
 		direction = new Vector3(directionX, directionY, directionZ).Multiply(normalizedDistance);
-		PartS.x = direction.x;
-		PartS.y = direction.y;
-		PartS.z = direction.z;
+		//sets direction for ParticleSystem
+		particlesVOLM.x = direction.x;
+		particlesVOLM.y = direction.y;
+		particlesVOLM.z = direction.z;
 
 	}
 
@@ -85,6 +110,16 @@ public class Launcher : MonoBehaviour
 		Vector3 distance = targetPosition.position - transform.position;
 		distance.y = 0;
 		return distance.magnitude;
+	}
+
+	public float GetDistanceZ()
+	{
+		Vector3 distance = targetPosition.position - transform.position;
+		if (targetZ == -1)
+		{
+			targetZ = distance.z;
+		}
+		return targetZ;
 	}
 	/*
 	Vector3[] CalculateArc()

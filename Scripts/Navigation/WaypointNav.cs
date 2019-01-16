@@ -4,14 +4,16 @@ using UnityEngine;
 
 public class WaypointNav : MonoBehaviour
 {
-	[Header("if rigidbody is found then will move with MovePosition, else will move the transform.")]
+	[Header("If rigidbody is found then will move with")]
+	[Space(-10)]
+	[Header("MovePosition, else will move the transform.")]
 	public Waypoints waypoints;
 	public int speed = 1;
 	public float waitTime = 1;
-	int target;
+	int _target;
 	const float distanceIsCloseTo = 0.1f;
 	Rigidbody _rb;
-	bool waitRbComplete = true;
+	bool _waiting = false;
 
 	private void Awake()
 	{
@@ -23,7 +25,7 @@ public class WaypointNav : MonoBehaviour
 	{
 		if (_rb == null)
 		{
-			StartCoroutine("Move");
+			Invoke("Move",0);
 		}
 	}
 
@@ -35,50 +37,67 @@ public class WaypointNav : MonoBehaviour
 		}
 	}
 
-	IEnumerator Move()
+	private void Update()
 	{
-		while (0 != 1)
+		if (_rb == null)
 		{
-			if (Vector3.Distance(transform.position, waypoints.connectedPoints[target].position) < distanceIsCloseTo)
-			{
-				yield return new WaitForSeconds(waitTime);
-				MoveToNext();
-			}
-			transform.position = Vector3.MoveTowards(transform.position, waypoints.connectedPoints[target].position, speed * Time.deltaTime);
-			yield return null;
+			Move();
+		}
+	}
+
+	void Move()
+	{
+
+		if (Vector3.Distance(transform.position, waypoints.connectedPoints[_target].position) < distanceIsCloseTo && !_waiting)
+		{
+			StartCoroutine("Wait");
+			MoveToNext();
+		}
+		else if (!_waiting)
+		{
+			transform.position = Vector3.MoveTowards(transform.position, waypoints.connectedPoints[_target].position, speed * Time.deltaTime);
 		}
 	}
 
 	void MoveRb()
 	{
-		
-		if (Vector3.Distance(transform.position, waypoints.connectedPoints[target].position) < distanceIsCloseTo)
+		if (Vector3.Distance(transform.position, waypoints.connectedPoints[_target].position) < distanceIsCloseTo && !_waiting)
 		{
-			if (waitRbComplete)
-			{
-				StartCoroutine("WaitRb");
-				
-			}
-			
+
+			StartCoroutine("Wait");
+			MoveToNext();
 		}
-		_rb.MovePosition(Vector3.MoveTowards(transform.position, waypoints.connectedPoints[target].position, speed * Time.deltaTime));
-			
-		
-	}
-	IEnumerator WaitRb()
-	{
-		waitRbComplete = false;
-		yield return new WaitForSeconds(waitTime);
-		MoveToNext();
-		waitRbComplete = true;
+		else if(!_waiting)
+		{
+			_rb.MovePosition(Vector3.MoveTowards(transform.position, waypoints.connectedPoints[_target].position, speed * Time.deltaTime));
+		}
 	}
 
-	private void MoveToNext()
+	IEnumerator Wait()
 	{
-		target++;
-		if (target >= waypoints.connectedPoints.Length)
+		_waiting = true;
+		yield return new WaitForSeconds(waitTime);
+		_waiting = false;
+	}
+
+	void MoveToNext()
+	{
+		_target++;
+		if (_target >= waypoints.connectedPoints.Length)
 		{
-			target = 0;
+			_target = 0;
 		}
+	}
+
+	public Vector3 CurrentDirection()
+	{
+		Vector3 direction = transform.position - waypoints.connectedPoints[_target].position;
+		return direction.normalized;
+	}
+
+	public bool Waiting()
+	{
+
+		return _waiting;
 	}
 }

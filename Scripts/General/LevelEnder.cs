@@ -10,7 +10,7 @@ public class LevelEnder : MonoBehaviour
 	}
 	private void OnTriggerEnter(Collider other)
 	{
-		if (other.tag == "player")
+		if (other.tag == "Player")
 		{
 			TheCubeGameManager.LoadNextLevel();
 		}

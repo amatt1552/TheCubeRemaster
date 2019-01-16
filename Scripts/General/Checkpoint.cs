@@ -18,7 +18,7 @@ public class Checkpoint : MonoBehaviour
 		if (activatedAtStart)
 		{
 			Activate();
-			GameObject player = GameObject.FindGameObjectWithTag("player");
+			GameObject player = TheCubeGameManager.player;
 			if (player != null)
 			{
 				ResetRespawn(player);
@@ -43,7 +43,7 @@ public class Checkpoint : MonoBehaviour
 
 	private void OnTriggerEnter(Collider other)
 	{
-		if (other.tag == "player")
+		if (other.tag == "Player")
 		{
 			Activate();
 			ResetRespawn(other.gameObject);
@@ -56,6 +56,7 @@ public class Checkpoint : MonoBehaviour
 		if (controller != null && spawnPoint != null)
 		{
 			controller.respawnPoint = spawnPoint;
+			controller.positionZ = spawnPoint.position.z;
 		}
 	}
 

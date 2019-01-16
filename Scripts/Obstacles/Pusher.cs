@@ -38,7 +38,8 @@ public class Pusher : MonoBehaviour
 
 	//how close it gets to a point
 	const float CLOSE_TO_POINT = 0.1f;
-	
+
+	public Collider killingTrigger;
 
 	private void Start()
 	{
@@ -111,14 +112,16 @@ public class Pusher : MonoBehaviour
 	IEnumerator Push()
 	{
 		_coroutineRunning = true;
+		killingTrigger.enabled = true;
 		//go to push point
 		while (Vector3.Distance(pusher.position, pushPoint.position) > CLOSE_TO_POINT)
 		{
 			_pusherRb.MovePosition(Vector3.MoveTowards(pusher.position, pushPoint.position, pushSpeed * Time.deltaTime));
-			yield return null;
+			yield return new WaitForFixedUpdate();
 
 		}
 		//wait to retract back
+		killingTrigger.enabled = false;
 		yield return new WaitForSeconds(retractTime);
 		pushState = PushState.eRetract;
 		_coroutineRunning = false;
@@ -133,7 +136,7 @@ public class Pusher : MonoBehaviour
 		while (Vector3.Distance(pusher.position, retractPoint.position) > CLOSE_TO_POINT)
 		{
 			_pusherRb.MovePosition(Vector3.MoveTowards(pusher.position, retractPoint.position, retractSpeed * Time.deltaTime));
-			yield return null;
+			yield return new WaitForFixedUpdate();
 
 		}
 		

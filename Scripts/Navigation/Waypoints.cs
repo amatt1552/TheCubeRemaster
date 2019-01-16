@@ -5,7 +5,7 @@ using UnityEngine;
 public class Waypoints : MonoBehaviour
 {
 	public Transform[] connectedPoints;
-	public bool debugging;
+	public bool debugging = true;
 	private void OnDrawGizmos()
 	{
 		if (debugging)

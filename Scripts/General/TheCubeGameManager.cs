@@ -9,9 +9,14 @@ public class TheCubeGameManager : MonoBehaviour
 	private int _currentLevel;
 	private int _finalLevel;
 	AsyncOperation asyncManager;
-	const int WAIT_TIME = 5;
+	const int WAIT_TIME = 8;
 	bool _startOverOneShot;
-
+	//if this wasn't singleplayer I'd only put the player in the 
+	//CubeController and not make it static. 
+	//might use function instead later
+	public static GameObject player;
+	public static GameObject playerMesh;
+	public static Vector3 startScale;
 
 	private void Awake()
 	{
@@ -21,7 +26,6 @@ public class TheCubeGameManager : MonoBehaviour
 			_S = this;
 		}
 		
-		_currentLevel = SceneManager.GetActiveScene().buildIndex;
 		_finalLevel = SceneManager.sceneCountInBuildSettings - 1;
 		print(_finalLevel);
 	}
@@ -38,7 +42,15 @@ public class TheCubeGameManager : MonoBehaviour
 
 	private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
 	{
+		print("sceneLoaded");
+		player = GameObject.FindGameObjectWithTag("Player");
+		if (player != null)
+		{
+			playerMesh = player.transform.Find("playerMesh").gameObject;
 
+			startScale = playerMesh.transform.localScale;
+		}
+		_currentLevel = SceneManager.GetActiveScene().buildIndex;
 		if (_currentLevel == _finalLevel)
 		{
 			if (!_startOverOneShot)

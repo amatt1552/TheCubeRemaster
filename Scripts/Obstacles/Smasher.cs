@@ -4,13 +4,14 @@ using UnityEngine;
 [RequireComponent(typeof(Rigidbody))]
 public class Smasher : MonoBehaviour
 {
-	enum eSmasherState
+	enum SmasherState
 	{
 		Smashing, Retracting, Waiting
 	}
-	eSmasherState _smasherState;
+	SmasherState _smasherState;
 
 	Rigidbody _rb;
+	public Collider killingCollider;
 	public Transform topTransform, bottomTransform;
 	const float _smashSpeed = 20;
 	public float smashRetractPause = 4;
@@ -23,7 +24,7 @@ public class Smasher : MonoBehaviour
 	void Awake ()
 	{
 		_rb = GetComponent<Rigidbody>();
-		_smasherState = eSmasherState.Retracting;
+		_smasherState = SmasherState.Retracting;
 	}
 	
 	void FixedUpdate ()
@@ -38,9 +39,17 @@ public class Smasher : MonoBehaviour
 		{
 			case 0:
 				Smash();
+				if (killingCollider != null)
+				{
+					killingCollider.enabled = true;
+				}
 				break;
 			case 1:
 				Retract();
+				if (killingCollider != null)
+				{
+					killingCollider.enabled = false;
+				}
 				break;
 			case 2:
 				break;
@@ -57,7 +66,7 @@ public class Smasher : MonoBehaviour
 		if (Vector3.Distance(transform.position, bottomTransform.position) < _closeToPoint && !_enumOneShot)
 		{
 			_enumOneShot = true;
-			StartCoroutine(Wait(_smashPause, eSmasherState.Retracting));
+			StartCoroutine(Wait(_smashPause, SmasherState.Retracting));
 		}
 	}
 
@@ -69,15 +78,15 @@ public class Smasher : MonoBehaviour
 		{
 			print("retractingDone");
 			_enumOneShot = true;
-			StartCoroutine(Wait(smashRetractPause, eSmasherState.Smashing));
+			StartCoroutine(Wait(smashRetractPause, SmasherState.Smashing));
 		}
 	}
 	
 	//waits for time then sets state to be targeted state.
 
-	IEnumerator Wait(float time, eSmasherState targetState)
+	IEnumerator Wait(float time, SmasherState targetState)
 	{
-		_smasherState = eSmasherState.Waiting;
+		_smasherState = SmasherState.Waiting;
 		yield return new WaitForSeconds(time);
 		_smasherState = targetState;
 		_enumOneShot = false;

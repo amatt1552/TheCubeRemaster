@@ -4,7 +4,8 @@
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInternal: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
@@ -21,3 +22,18 @@ MonoBehaviour:
   skins:
   - {fileID: 2800000, guid: f704533186375c24288a8a49472c5da4, type: 3}
   - {fileID: 2800000, guid: 4fcf9de560e3c5c43867c6f9688570ac, type: 3}
+  poppedEffects:
+  - {fileID: 3894978802294272049, guid: d5f5d80575a2ae942bebd41660aaf8ad, type: 3}
+  smashedEffects: []
+  burnedEffectsA:
+  - {fileID: 8957396494569621240, guid: cef2834314e50b04e9f7bcde7347d34a, type: 3}
+  burnedEffectsB:
+  - {fileID: 9166805480215089173, guid: 1eada0d0c12c8c34b909aa56eec5450f, type: 3}
+  fallenEffects: []
+  slidingEffects:
+  - {fileID: 3305586207407790633, guid: 48a4c8b15552e6945afe11de00797152, type: 3}
+  poppedSoundEffects: []
+  smashedSoundEffects: []
+  burnedSoundEffects: []
+  fallenSoundEffects: []
+  slidingSoundEffects: []

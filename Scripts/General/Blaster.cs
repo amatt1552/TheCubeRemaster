@@ -13,20 +13,27 @@ public class Blaster : MonoBehaviour
 	bool flipReset = true;
 	public float pauseTime = 1;
 	GameObject _bullet;
+	//angle where it resets
 	static float _RESET_ANGLE = 5;
 	bool waiting;
 	public Transform blastPos;
 	public float fireRate = 2;
+	
 
 	void Start ()
 	{
+		
 		_bullet = (GameObject)Resources.Load("Prefabs/Blast");
 		if (_bullet == null)
 			print("EERREEER");
 		if (blastPos == null)
 			blastPos = transform;
-		StartCoroutine("RotateTowards");
-		StartCoroutine("Fire");
+		InvokeRepeating("Fire", fireRate, fireRate);
+	}
+
+	private void Update()
+	{
+		RotateTowards();
 	}
 
 	IEnumerator Wait()
@@ -37,29 +44,41 @@ public class Blaster : MonoBehaviour
 		Flip();
 		waiting = false;
 	}
-	IEnumerator RotateTowards()
+
+	void RotateTowards()
 	{
-		while (1 == 1)
+		
+		Vector3 direction = transform.position - (transform.position - transform.up);
+		float angleCheck = Vector3.Angle(-Vector3.down, direction);
+		angleCheck = Mathf.Ceil(angleCheck);
+		if (angleCheck <= _RESET_ANGLE)
 		{
-			Vector3 direction = transform.position - (transform.position - transform.up);
-			float angleCheck = Vector3.Angle(-Vector3.down, direction);
-			if (angleCheck <= _RESET_ANGLE)
+			flipReset = true;
+		}
+		if (angleCheck >= angleLimit && flipReset)
+		{
+			StartCoroutine("Wait");
+			flipReset = false;
+		}
+		if (!waiting)
+		{
+			currentAngle += speed * flipper;
+			currentAngle = currentAngle >= 360 ? 0 : currentAngle;
+			currentAngle = currentAngle < 0 ? 360 : currentAngle;
+			if (currentAngle > angleLimit && currentAngle < 360 - angleLimit)
 			{
-				flipReset = true;
+				print("oops");
+				if (flipper > 0)
+				{
+					currentAngle = 360 - angleLimit;
+				}
+				else
+				{
+					currentAngle = angleLimit;
+				}
 			}
-			if (angleCheck >= angleLimit && flipReset)
-			{
-				StartCoroutine("Wait");
-				flipReset = false;
-			}
-			if (!waiting)
-			{
-				currentAngle = currentAngle >= 360 ? 0 : currentAngle;
-				currentAngle = currentAngle < 0 ? 360 : currentAngle;
-				currentAngle += speed * flipper;
-			}
+			
 			transform.rotation = Quaternion.AngleAxis(currentAngle, Vector3.forward);
-			yield return null;
 		}
 	}
 
@@ -68,13 +87,10 @@ public class Blaster : MonoBehaviour
 		flipper *= -1;
 	}
 
-	IEnumerator Fire()
+	void Fire()
 	{
-		while (1 == 1)
-		{
-			yield return new WaitForSeconds(fireRate);
-			GameObject bulletGO = Instantiate(_bullet, blastPos.position, blastPos.rotation);
+		
+		GameObject bulletGO = Instantiate(_bullet, blastPos.position, blastPos.rotation);
 			
-		}
 	}
 }

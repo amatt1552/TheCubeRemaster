@@ -15,8 +15,8 @@ public class LevelStarter : MonoBehaviour
 
 	void Start ()
 	{
+		_player = TheCubeGameManager.player;
 		_rb = GetComponent<Rigidbody>();
-		_player = GameObject.FindGameObjectWithTag("player");
 		if (_player != null && elevatorTargetPosition != null)
 		{
 			_cubeMotor = _player.GetComponent<CubeMotor>();

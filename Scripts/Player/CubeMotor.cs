@@ -4,25 +4,40 @@ using UnityEngine;
 [RequireComponent(typeof(CubeController))]
 public class CubeMotor : MonoBehaviour
 {
+	//state of object. not sure if I want to use this yet.
+	enum CurrentState
+	{
+		alive,
+		popped,
+		fell,
+		burned,
+		squished,
+		pushed
+	}
+	CurrentState currentState;
+
+	//launcher
 	bool _inLauncher;
 	Launcher _currentLauncher;
 
+	//bouncer
 	bool _inBouncer;
 	bool _groundJumpActive = true;
 	Bouncer _currentBouncer;
-
+	
+	//speedboost
 	bool _inBooster;
-
+	
+	//movingObject
 	bool _onMovingObject;
 	Rigidbody _movingRb;
 
-	bool _movementEnabled = true;
+	//camera
+	bool _inCameraEdit;
+	public CameraFollow cameraFollow;
+	CameraEditSettings _currentCameraEdit;
 
-	
-	public enum eDeathTypes
-	{
-		hit
-	}
+	bool _movementEnabled = true;
 
 	[Header("Set before starting")]
 	public CubeInfoScriptableObject _cubeInfoSO;
@@ -51,29 +66,68 @@ public class CubeMotor : MonoBehaviour
 	Vector3 _positionBeforeJump;
 	bool _distanceReached;
 
+	//jump variables end.
+
 	//helps prevent missing the ground check.
 	bool _ground;
 	bool _groundOneShot;
 
-	private void Start()
+	//for falling
+	bool fallImminent;
+	bool falling;
+
+	//particle effects
+	ParticleSystem _movingEffect;
+	ParticleSystem _poppedEffect;
+
+	private void Awake()
 	{
-		
 		if (_cubeInfoSO == null)
 		{
 			Debug.LogError("Need to add a CubeInfoScriptableObject to this controller!");
 			enabled = false;
 		}
+
 		_controller = GetComponent<CubeController>();
 		rb = _controller.GetRigidbody();
 		targetHeight = _cubeInfoSO.jumpHeight;
+
+		//particle effects on player
+
+		GameObject tempObj;
+		//consistant names needed for sanity. fix all of them later
+		tempObj = Instantiate(_cubeInfoSO.slidingEffects[0]);
+		tempObj.transform.parent = transform;
+		tempObj.transform.localPosition = Vector3.down * 0.4f; 
+		_movingEffect = tempObj.GetComponent<ParticleSystem>();
+
+		tempObj = Instantiate(_cubeInfoSO.poppedEffects[0]);
+		tempObj.transform.parent = transform;
+		tempObj.transform.localPosition = Vector3.zero;
+		tempObj.transform.rotation = transform.rotation;
+		_poppedEffect = tempObj.GetComponent<ParticleSystem>();
+
+		_controller.onRespawn.AddListener(OnRespawn);
+	}
+
+	private void Start()
+	{
+		if (cameraFollow == null && Camera.main != null)
+		{
+			cameraFollow = Camera.main.gameObject.GetComponent<CameraFollow>();
+		}
+		cameraFollow.FollowedObject = gameObject;
+		cameraFollow.SnapToObject(); 
 	}
 	
 	private void Update ()
 	{
-		
 		_moveDirection = new Vector3(Input.GetAxis("Horizontal"), 0, 0);
+		
+		//ground stuff
 		if (_controller.Ground())
 		{
+			_ground = true;
 			_extraJumps = 0;
 			_jumpDownReset = true;
 			_distanceReached = false;
@@ -83,13 +137,24 @@ public class CubeMotor : MonoBehaviour
 				print("aHeroHasFallen.");
 				_groundOneShot = true;
 			}
+			print(_controller.moving);
+			if (_controller.moving && !_movingEffect.isPlaying)
+			{
+				_movingEffect.Play();
+			}
+			else if (!_controller.moving)
+			{
+				_movingEffect.Stop();
+			}
 		}
 		else
 		{
+			_ground = false;
 			_groundOneShot = false;
+			_movingEffect.Stop();
 		}
-		//jump input
 
+		//jump input
 		if (Input.GetAxisRaw("Jump") != 0)
 		{
 			_holdingJump = true;
@@ -102,12 +167,29 @@ public class CubeMotor : MonoBehaviour
 		}
 		else
 		{
+			_distanceReached = true;
+			_realJumpForce = 0;
 			_holdingJump = false;
 			_jumpDownReset = true;
 		}
 
 		SetJump();
 
+		//falling stuff
+		//fallImminent and falling makes sure it doesn't play more than once
+
+		if (_ground && _controller.OnEdge() && !fallImminent && !falling && !_controller.moving)
+		{
+			float fallTime;
+			fallTime = 0.2f;
+			StartCoroutine("FallImminent", fallTime);
+		}
+		if(!_controller.OnEdge() && !falling && fallImminent)
+		{
+			StopCoroutine("FallImminent");
+			fallImminent = false;
+		}
+		
 	}
 	
 	private void FixedUpdate()
@@ -117,31 +199,76 @@ public class CubeMotor : MonoBehaviour
 		Bouncing();
 		Boosting();
 		OnMovingObject();
+		
 
-		if (!_controller.dead && _movementEnabled)
+		if (!_controller.dead)
 		{
-			_controller.Move(_cubeInfoSO.speed + _extraSpeed, _moveDirection); //+ _movingObjectDirection * Time.deltaTime));
-			if (_groundJumpActive && !_inLauncher) 
-				_controller.Jump(_realJumpForce, _holdingJump, _distanceReached);
-		}
+			currentState = CurrentState.alive;
+			if (_movementEnabled)
+			{
 
+				_controller.Move(_cubeInfoSO.speed + _extraSpeed + _movingObjectDirection.x, _moveDirection);
+
+				if (!_holdingJump)
+				{
+					_controller.Step(_moveDirection, 1f);
+				}
+				if (_groundJumpActive && !_inLauncher && !_inBouncer)
+				{
+					_controller.Jump(_realJumpForce, _holdingJump, ref _distanceReached);
+
+				}
+			}
+		}
 	}
+
 
 	private void OnTriggerEnter(Collider other)
 	{
 		//death stuffs
-		if (other.tag == "enemy")
+		if (other.tag == "Enemy")
 		{
+			_poppedEffect.Play();
 			_controller.Dead(_cubeInfoSO.deathTime);
 			print("dead");
 		}
-		if (other.tag == "theVoid")
+		if (other.tag == "TheVoid")
+		{
+			_controller.Dead(_cubeInfoSO.deathTime, false, false);
+			print("dead");
+		}
+		if (other.tag == "Blaster")
 		{
 			_controller.Dead(_cubeInfoSO.deathTime);
+			Instantiate(_cubeInfoSO.burnedEffectsA[0],transform.position, transform.rotation);
 			print("dead");
 		}
 
-		if (other.tag == "launcher")
+		if (other.tag == "Pusher")
+		{
+			_controller.Dead(_cubeInfoSO.deathTime, false, false);
+			print("dead");
+		}
+
+		if (other.tag == "Hammer")
+		{
+			_controller.Dead(_cubeInfoSO.deathTime, false, false);
+			print("dead");
+		}
+
+		if (other.tag == "Smasher")
+		{
+			_controller.Dead(_cubeInfoSO.deathTime, false, false, false);
+			if (!_ground)
+				_controller.GetRigidbody().AddForce(Vector3.down * 10, ForceMode.Impulse);
+
+			TheCubeGameManager.playerMesh.transform.localPosition = Vector3.down * 0.5f;
+			TheCubeGameManager.playerMesh.transform.localScale = new Vector3(TheCubeGameManager.playerMesh.transform.localScale.x, TheCubeGameManager.playerMesh.transform.localScale.x / 2, TheCubeGameManager.playerMesh.transform.localScale.z / 10);
+			print("dead");
+		}
+
+		//other
+		if (other.tag == "Launcher")
 		{
 			print("inLaucher!");
 			Launcher launch = other.GetComponent<Launcher>();
@@ -153,7 +280,7 @@ public class CubeMotor : MonoBehaviour
 			_inLauncher = true;
 		}
 
-		if (other.tag == "bouncer")
+		if (other.tag == "Bouncer")
 		{
 			print("inBouncer!");
 			Bouncer bouncer = other.GetComponent<Bouncer>();
@@ -165,13 +292,13 @@ public class CubeMotor : MonoBehaviour
 			_inBouncer = true;
 		}
 
-		if (other.tag == "booster")
+		if (other.tag == "Booster")
 		{
 			print("SPEEDBOOST!");
 			_inBooster = true;
 		}
 
-		if (other.tag == "moving")
+		if (other.tag == "Moving")
 		{
 			print("inMovingObject");
 			_onMovingObject = true;
@@ -181,10 +308,27 @@ public class CubeMotor : MonoBehaviour
 				_movingRb = movingRb;
 			}
 		}
+		if (other.tag == "CameraEdit")
+		{
+			_currentCameraEdit = other.GetComponent<CameraEditSettings>();
+			if(_currentCameraEdit != null)
+			{
+				print("moving camera..");
+				cameraFollow.SetOffset(_currentCameraEdit.newCameraOffset);
+			}
+		}
+
 	}
+
+	//maybe have these based on ground instead.
 
 	private void OnCollisionEnter(Collision collision)
 	{
+		if (falling && !_controller.dead)
+		{
+			StartCoroutine("Recover", 3);
+		}
+		
 		if (!_inLauncher && _currentLauncher != null)
 		{
 			_movementEnabled = true;
@@ -204,29 +348,52 @@ public class CubeMotor : MonoBehaviour
 		}
 	}
 
+	private void OnCollisionStay(Collision collision)
+	{
+		if (!falling && !_controller.dead)
+		{
+			_controller.MoveToZ();
+		}
+	}
+
+	private void OnCollisionExit(Collision collision)
+	{
+		if (falling)
+		{
+			StopCoroutine("Recover");
+		}
+	}
 	private void OnTriggerExit(Collider other)
 	{
-		if (other.tag == "launcher")
+		if (other.tag == "Launcher")
 		{
 			print("leftLaucher!");
 			_inLauncher = false;
 		}
-		if (other.tag == "bouncer")
+		if (other.tag == "Bouncer")
 		{
 			print("leftBouncer!");
 			_inBouncer = false;
 		}
-		if (other.tag == "booster")
+		if (other.tag == "Booster")
 		{
 			print("enoughBoosting!");
 			_inBooster = false;
 		}
-		if (other.tag == "moving")
+		if (other.tag == "Moving")
 		{
 			print("leftMovingObject!");
 			_onMovingObject = false;
 		}
+		if (other.tag == "CameraEdit")
+		{
+			
+			print("resetting Camera..");
+			cameraFollow.SetToDefault();
+			
+		}
 	}
+
 
 	void SetJump()
 	{
@@ -234,6 +401,7 @@ public class CubeMotor : MonoBehaviour
 			if (!_jumpDown)
 			{
 				_jumpOneShot = false;
+				
 			}
 
 			if (_jumpDown && _controller.Ground() && !_jumpOneShot)
@@ -247,6 +415,7 @@ public class CubeMotor : MonoBehaviour
 			//extra jumps
 			else if (_jumpDown && !_controller.Ground() && _extraJumps < _cubeInfoSO.maxExtraJumps)
 			{
+				print("extra hop");
 				_realJumpForce = 1f;
 				_extraJumps++;
 				_positionBeforeJump = transform.position;
@@ -258,7 +427,7 @@ public class CubeMotor : MonoBehaviour
 			if (_realJumpForce < _cubeInfoSO.jumpForce)
 			{
 
-				_realJumpForce += _cubeInfoSO.jumpForce * _jumpForceIncreaseMultiplier * Time.fixedDeltaTime;
+				_realJumpForce += _cubeInfoSO.jumpForce * _jumpForceIncreaseMultiplier * Time.deltaTime;
 			}
 			else
 			{
@@ -282,6 +451,7 @@ public class CubeMotor : MonoBehaviour
 			{
 				_movementEnabled = false;
 				_currentLauncher.Launch(gameObject);
+				_controller.positionZ = _currentLauncher.GetDistanceZ();
 			}
 			
 		}
@@ -313,10 +483,13 @@ public class CubeMotor : MonoBehaviour
 
 	void OnMovingObject()
 	{
-		if (_movingRb != null && _onMovingObject)
+		if (_movingRb != null && _onMovingObject && _ground)
 		{
 			_movingObjectDirection = _movingRb.velocity;
-			print(_movingRb.velocity);
+		}
+		else
+		{
+			_movingObjectDirection = Vector3.zero;
 		}
 	}
 
@@ -324,4 +497,36 @@ public class CubeMotor : MonoBehaviour
 	{
 		_movementEnabled = enabled;
 	}
+
+	IEnumerator FallImminent(float waitTime)
+	{
+		fallImminent = true;
+		yield return new WaitForSeconds(waitTime);
+		print("I fell.");
+		_movementEnabled = false;
+		_controller.RemoveConstraints();
+		fallImminent = false;
+		falling = true;
+	}
+
+	//eventChecking
+
+	void OnRespawn()
+	{
+		falling = false;
+		_movementEnabled = true;
+		TheCubeGameManager.playerMesh.transform.localPosition = Vector3.zero;
+		TheCubeGameManager.playerMesh.transform.localScale = TheCubeGameManager.startScale;
+		cameraFollow.SetToDefault();
+		cameraFollow.SnapToObject();
+	}
+
+	IEnumerator Recover(float recoverTime)
+	{
+		yield return new WaitForSeconds(recoverTime);
+		_controller.Recover();
+		falling = false;
+		_movementEnabled = true;
+	}
+
 }

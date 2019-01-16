@@ -11,5 +11,23 @@ public class CubeInfoScriptableObject: ScriptableObject
 	public float jumpHeight = 2f;
 	public int maxExtraJumps = 1;
 	public float deathTime = 3;
+
+	[Space]
+
 	public Texture[] skins;
+
+	public GameObject[] poppedEffects;
+	public GameObject[] smashedEffects;
+	public GameObject[] burnedEffectsA;
+	public GameObject[] burnedEffectsB;
+	public GameObject[] fallenEffects;
+	public GameObject[] slidingEffects;
+
+	[Space]
+
+	public AudioClip[] poppedSoundEffects;
+	public AudioClip[] smashedSoundEffects;
+	public AudioClip[] burnedSoundEffects;
+	public AudioClip[] fallenSoundEffects;
+	public AudioClip[] slidingSoundEffects;
 }
